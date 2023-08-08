@@ -2,9 +2,20 @@
 import pygame
 import pygame.mixer
 import pygame.freetype
+import pygame.joystick
 import sys
 import os
 pygame.mixer.init()
+
+global ctrl
+
+try:
+    pygame.joystick.init()
+    pygame.joystick.get_count()
+    c = [pygame.joystick.Joystick(c) for c in range(pygame.joystick.get_count())]
+    ctrl = True
+except:
+    ctrl = False
 
 time = 0
 seconds = 0
@@ -31,7 +42,7 @@ worldx = 960
 worldy = 720
 enemyx = 400
 enemyy = 605
-fps = 30
+fps = 30 
 ani = 4
 world = pygame.display.set_mode([worldx, worldy], pygame.RESIZABLE)
 forwardx  = 600
@@ -58,7 +69,6 @@ def stats(score, health, powerup):
     myfont.render_to(world, (4, 4), "Score "+str(score), BLACK, None, size=42)
     myfont.render_to(world, (4, 52), "Health "+str(health), BLACK, None, size=42)
     myfont.render_to(world, (4, 94), "Powerup "+str(powerup), BLACK, None, size=42)
-
 
 
 class Throwable(pygame.sprite.Sprite):
@@ -175,14 +185,6 @@ class Player(pygame.sprite.Sprite):
             pygame.mixer.Sound.play(Jump)
             self.image = pygame.transform.flip(self.images[self.frame // ani], True, False)
 
-
-    def selfmove(self):
-        if self.automove == True:
-            if self.facing_right == True:
-                self.movex += steps
-            else:
-                self.movex -= steps
-
     def update(self):
         """
         Update sprite position
@@ -239,7 +241,6 @@ class Player(pygame.sprite.Sprite):
         # fall off the world
         if self.rect.y > worldy:
             self.health -=1
-            print(self.health)
             if self.health <= 0:
                 pygame.quit()
             self.rect.x = tx
@@ -439,6 +440,11 @@ class Level:
 '''
 Setup
 '''
+try:
+    if ctrl == True:
+        joystick = pygame.joystick.Joystick(0)
+except:
+    ctrl = False
 
 backdrop = pygame.image.load(os.path.join('images', 'stage.png'))
 clock = pygame.time.Clock()
@@ -461,7 +467,7 @@ eloc = [enemyx, enemyy]
 enemy_list = Level.bad(1, eloc)
 gloc = []
 i = 0
-while i <= (worldx / tx) + tx:
+while i <= (worldx - tx):# + tx:
     gloc.append(i * tx)
     i = i + 1
 
@@ -471,6 +477,15 @@ item_list = Level.powerup(1)
 plat_list = Level.platform(1, tx, ty)
 enemy_list = Level.bad( 1, eloc )
 loot_list = Level.loot(1)
+
+Butn_A = 0
+Butn_B = 1
+Butn_X = 2
+Butn_Y = 3
+Butn_LB = 4
+Butn_RB = 5
+Butn_Back = 6
+Butn_Start = 7
 
 
 '''
@@ -482,6 +497,46 @@ while main:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit(0)
+        if ctrl == True:
+            if event.type == pygame.JOYBUTTONDOWN:
+                if event.button == Butn_A or event.button == Butn_B:
+                    player.jump()
+                    player.anim = jump
+                if event.button == Butn_X:
+                    if player.powerup == 'fireflower':
+                        if not fire.firing:
+                            fire = Throwable(player.rect.x, player.rect.y, 'fire.png', 1)
+                            firepower.add(fire)
+                            pygame.mixer.Sound.play(Fire) 
+                if event.button == Butn_Y and player.is_jumping == True:
+                    player.movey = (tx - 20)
+                                                               
+            if event.type == pygame.JOYHATMOTION:
+                for i in range(hats):
+                   hat = joystick.get_hat(i)
+    
+                if hat[0] == 1 or hat[1] == 1:
+                    player.facing_right = True
+                    player.control(steps, 0)
+                    player.anim = walk
+                if hat[0] == -1 or hat[1] == -1:
+                    player.facing_right = False
+                    player.control(-steps, 0)
+                    player.anim = walk
+                if hat == (0, 0):
+                    if player.facing_right == False:
+                        player.control(steps, 0)
+                        player.facing_right = False
+                        player.anim = stand
+                    if player.facing_right == True:
+                        player.control(-steps, 0)
+                        player.facing_right = True
+                        player.anim = stand
+                                                            
+            if event.type == pygame.JOYBUTTONUP:
+                player.anim = stand
+            else:
+                player.anim = stand
         if event.type == pygame.KEYDOWN:
             if event.key == ord('q'):
                 pygame.quit()
@@ -497,8 +552,6 @@ while main:
             if event.key == pygame.K_UP or event.key == ord('w') or event.key == pygame.K_SPACE:
                 player.jump()
                 player.anim = jump
-            if event.key == ord('s') or event.key == pygame.K_DOWN:
-                player.anim = crouch
             if event.key == ord('s') or event.key == pygame.K_DOWN and player.is_jumping == True:
                 player.movey = (tx - 20)
 
@@ -517,6 +570,7 @@ while main:
                         fire = Throwable(player.rect.x, player.rect.y, 'fire.png', 1)
                         firepower.add(fire)
                         pygame.mixer.Sound.play(Fire) 
+            player.anim = stand
 
 
 
@@ -568,12 +622,16 @@ while main:
     plat_list.draw(world)
     flag_list.draw(world)
     item_list.draw(world)
-
+    try:
+        if ctrl == True:
+            hats = joystick.get_numhats()
+    except:
+        pass
     for e in enemy_list:
         e.move()
     stats(player.score, player.health, player.powerup)
     pygame.display.flip()
-    clock.tick(fps)
+    clock.tick(fps * worldx)
     if player.anim == stand:
         img = pygame.image.load(os.path.join('images', 'walk5.png')).convert()
         img.convert_alpha()
