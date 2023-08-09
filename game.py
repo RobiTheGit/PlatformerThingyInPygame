@@ -6,7 +6,7 @@ import pygame.joystick
 import sys
 import os
 pygame.mixer.init()
-
+MusicOn = False
 global ctrl
 
 try:
@@ -29,8 +29,10 @@ walk = 'walk'
 jump = 'jump'
 lvl = 1
 s = 'sound'
-music = pygame.mixer.music.load(os.path.join(s, 'music.ogg'))
-pygame.mixer.music.play(-1)
+if MusicOn == True:
+    music = pygame.mixer.music.load(os.path.join(s, 'music.ogg'))
+    pygame.mixer.music.play(-1)
+
 flag = pygame.mixer.Sound(os.path.join(s, 'flag.ogg'))
 item = pygame.mixer.Sound(os.path.join(s, '1up.ogg'))
 ouch = pygame.mixer.Sound(os.path.join(s, 'Hit.ogg'))
@@ -243,7 +245,10 @@ class Player(pygame.sprite.Sprite):
             self.health -=1
             if self.health <= 0:
                 pygame.quit()
-            self.rect.x = tx
+            if self.facing_right == True:
+                self.rect.x = tx
+            else:
+                self.rect.x = -tx
             self.rect.y = ty
 
         plat_hit_list = pygame.sprite.spritecollide(self, plat_list, False)
@@ -346,7 +351,7 @@ class Level:
 
         if lvl == 2:
             while i < len(gloc):
-                ground = Platform(gloc[i], worldy - ty, tx, ty, 'tile-ground.png')
+                ground = Platform(gloc[i], worldy - ty, tx, ty, 'tile-ground.png') # you can change the ground look for different levels btw
                 ground_list.add(ground)
                 i = i + 1
 
@@ -373,9 +378,11 @@ class Level:
         i = 0
         if lvl == 1:
             ploc.append((200, worldy - ty - 128, 4.5))
- 
             ploc.append((300, worldy - ty - 256, 4.5))
-             
+            ploc.append((800, worldy - ty - 64, 4.5))
+            ploc.append((864, worldy - ty - 128, 2.5))
+            ploc.append((928, worldy - ty - 192, .5))
+                    
             while i < len(ploc):
                 j = 0
                 while j <= ploc[i][2]:
@@ -502,7 +509,7 @@ while main:
                 if event.button == Butn_A or event.button == Butn_B:
                     player.jump()
                     player.anim = jump
-                if event.button == Butn_X:
+                if event.button == Butn_X or event.button == Butn_RB or event.button == Butn_LB:
                     if player.powerup == 'fireflower':
                         if not fire.firing:
                             fire = Throwable(player.rect.x, player.rect.y, 'fire.png', 1)
