@@ -6,7 +6,7 @@ import pygame.joystick
 import sys
 import os
 pygame.mixer.init()
-MusicOn = False
+MusicOn = True
 global ctrl
 
 try:
