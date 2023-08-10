@@ -6,7 +6,7 @@ import pygame.joystick
 import sys
 import os
 pygame.mixer.init()
-MusicOn = True
+MusicOn = False
 global ctrl
 
 try:
@@ -18,8 +18,6 @@ except:
     ctrl = False
 
 time = 0
-seconds = 0
-minute = 0
 '''
 Variables
 '''
@@ -71,8 +69,6 @@ def stats(score, health, powerup):
     myfont.render_to(world, (4, 4), "Score "+str(score), BLACK, None, size=42)
     myfont.render_to(world, (4, 52), "Health "+str(health), BLACK, None, size=42)
     myfont.render_to(world, (4, 94), "Powerup "+str(powerup), BLACK, None, size=42)
-
-
 class Throwable(pygame.sprite.Sprite):
     """
     Spawn a throwable object
@@ -130,10 +126,10 @@ class Player(pygame.sprite.Sprite):
         self.score = 0
         self.facing_right = True
         self.is_jumping = True
-        self.is_double_jump = True
         self.is_falling = True
         self.images = []
         self.anim = walk
+        self.gravity()
         for i in range(1, 7):
             if self.anim == walk:
                 img = pygame.image.load(os.path.join('images', 'walk' + str(i) + '.png')).convert()
@@ -142,28 +138,27 @@ class Player(pygame.sprite.Sprite):
                 self.images.append(img)
                 self.image = self.images[0]
                 self.rect = self.image.get_rect()
-
-        if self.anim == stand:
-            img = pygame.image.load(os.path.join('images', 'walk5.png')).convert()
-            img.convert_alpha()
-            img.set_colorkey(ALPHA)
-            self.images.append(img)
-            self.image = self.images[4]
-            self.rect = self.image.get_rect()
-        if self.anim == jump:
-            img = pygame.image.load(os.path.join('images', 'walk6.png')).convert()
-            img.convert_alpha()
-            img.set_colorkey(ALPHA)
-            self.images.append(img)
-            self.image = self.images[5]
-            self.rect = self.image.get_rect()
-        if self.anim == crouch:
-            img = pygame.image.load(os.path.join('images', 'walk7.png')).convert()
-            img.convert_alpha()
-            img.set_colorkey(ALPHA)
-            self.images.append(img)
-            self.image = self.images[6]
-            self.rect = self.image.get_rect()
+            if self.anim == stand:
+                img = pygame.image.load(os.path.join('images', 'walk5.png')).convert()
+                img.convert_alpha()
+                img.set_colorkey(ALPHA)
+                self.images.append(img)
+                self.image = self.images[4]
+                self.rect = self.image.get_rect()
+            if self.anim == jump:
+                img = pygame.image.load(os.path.join('images', 'walk6.png')).convert()
+                img.convert_alpha()
+                img.set_colorkey(ALPHA)
+                self.images.append(img)
+                self.image = self.images[5]
+                self.rect = self.image.get_rect()
+            if self.anim == crouch:
+                img = pygame.image.load(os.path.join('images', 'walk7.png')).convert()
+                img.convert_alpha()
+                img.set_colorkey(ALPHA)
+                self.images.append(img)
+                self.image = self.images[6]
+                self.rect = self.image.get_rect()
 
 
 
@@ -182,7 +177,6 @@ class Player(pygame.sprite.Sprite):
         if self.is_jumping is False:
             self.is_falling = False
             self.is_jumping = True
-            self.is_double_jump = False
             self.anim = jump
             pygame.mixer.Sound.play(Jump)
             self.image = pygame.transform.flip(self.images[self.frame // ani], True, False)
@@ -196,18 +190,15 @@ class Player(pygame.sprite.Sprite):
         # moving left
         if self.movex < 0:
             self.anim = walk
-            self.is_jumping = True
-            self.is_double_jump = False
             self.frame += 1
             if self.frame >= 3 * ani:
                 self.frame = 0
             self.image = pygame.transform.flip(self.images[self.frame // ani], True, False)
-
         # moving right
+        
         if self.movex > 0:
-            self.anim = walk
             self.is_jumping = True
-            self.is_double_jump = False
+            self.anim = walk
             self.frame += 1
             if self.frame >= 3 * ani:
                 self.frame = 0
@@ -236,9 +227,10 @@ class Player(pygame.sprite.Sprite):
         for g in ground_hit_list:
             self.movey = 0
             self.rect.bottom = g.rect.top
-            self.is_jumping = False  # stop jumping
-            self.is_double_jump = False
+            self.gravity()
             self.anim == stand
+            self.gravity()
+            self.is_jumping = False  # stop jumping
 
         # fall off the world
         if self.rect.y > worldy:
@@ -254,21 +246,18 @@ class Player(pygame.sprite.Sprite):
         plat_hit_list = pygame.sprite.spritecollide(self, plat_list, False)
         for p in plat_hit_list:
             self.is_jumping = False  # stop jumping
-            self.is_double_jump = False
             self.movey = 0
             if self.rect.bottom <= p.rect.bottom:
                self.rect.bottom = p.rect.top
+               self.gravity()
             else:
                self.movey += 3.2
+               
 
         if self.is_jumping and self.is_falling is False:
             self.is_falling = True
             self.movey -= 44  # how high to jump
-
-        if self.is_jumping and self.is_falling is False and self.is_double_jump is True:
-            self.is_falling = True
-            self.movey -= 5  # how high to jump
-
+            
         loot_hit_list = pygame.sprite.spritecollide(self, loot_list, False)
         for loot in loot_hit_list:
             loot_list.remove(loot)
@@ -378,7 +367,7 @@ class Level:
         i = 0
         if lvl == 1:
             ploc.append((200, worldy - ty - 128, 4.5))
-            ploc.append((300, worldy - ty - 256, 4.5))
+            ploc.append((310, worldy - ty - 256, 4.5))
             ploc.append((800, worldy - ty - 64, 4.5))
             ploc.append((864, worldy - ty - 128, 2.5))
             ploc.append((928, worldy - ty - 192, .5))
@@ -485,6 +474,8 @@ plat_list = Level.platform(1, tx, ty)
 enemy_list = Level.bad( 1, eloc )
 loot_list = Level.loot(1)
 
+# XBOX Controller Constants
+
 Butn_A = 0
 Butn_B = 1
 Butn_X = 2
@@ -493,7 +484,11 @@ Butn_LB = 4
 Butn_RB = 5
 Butn_Back = 6
 Butn_Start = 7
-
+Butn_DPad_Null = (0, 0)
+Butn_DPad_Right = (1, 0)
+Butn_DPad_Left = (-1, 0)
+Butn_DPad_Up = (0, 1)
+Butn_DPad_Down = (0, -1)
 
 '''
 menu Loop
@@ -502,8 +497,9 @@ menu Loop
 while main:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            pygame.quit()
             sys.exit(0)
+            pygame.quit()
+            
         if ctrl == True:
             if event.type == pygame.JOYBUTTONDOWN:
                 if event.button == Butn_A or event.button == Butn_B:
@@ -522,15 +518,15 @@ while main:
                 for i in range(hats):
                    hat = joystick.get_hat(i)
     
-                if hat[0] == 1 or hat[1] == 1:
+                if hat == Butn_DPad_Right or hat == Butn_DPad_Up:
                     player.facing_right = True
                     player.control(steps, 0)
                     player.anim = walk
-                if hat[0] == -1 or hat[1] == -1:
+                if hat == Butn_DPad_Left or hat == Butn_DPad_Down:
                     player.facing_right = False
                     player.control(-steps, 0)
                     player.anim = walk
-                if hat == (0, 0):
+                if hat == Butn_DPad_Null:
                     if player.facing_right == False:
                         player.control(steps, 0)
                         player.facing_right = False
@@ -546,6 +542,7 @@ while main:
                 player.anim = stand
         if event.type == pygame.KEYDOWN:
             if event.key == ord('q'):
+                sys.exit(0)
                 pygame.quit()
                 main = False
             if event.key == pygame.K_LEFT or event.key == ord('a'):
@@ -647,17 +644,6 @@ while main:
         player.image = player.images[4]
         if player.is_jumping == True:
             player.anim = jump
-    if player.anim == jump:
-        img = pygame.image.load(os.path.join('images', 'walk6.png')).convert()
-        img.convert_alpha()
-        img.set_colorkey(ALPHA)
-        player.images.append(img)
-        player.image = player.images[5]
-    if player.anim == crouch:
-        img = pygame.image.load(os.path.join('images', 'walk7.png')).convert()
-        img.convert_alpha()
-        img.set_colorkey(ALPHA)
-        player.images.append(img)
-        player.image = player.images[6]
+
     time = time + 0.1
 
